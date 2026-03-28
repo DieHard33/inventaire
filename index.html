@@ -109,11 +109,15 @@ textarea{resize:none;min-height:80px;}
 <div class="hdr">
   <div class="hdr-row">
     <div><h1>🏠 Inventaire</h1><div class="sub" id="sub">0 article</div></div>
-    <button class="exp-btn" onclick="exportCSV()">📊 Export</button>
+    <div style="display:flex;gap:6px;flex-direction:column;align-items:flex-end;">
+      <button class="exp-btn" onclick="exportJSON()">💾 Sauvegarde</button>
+      <button class="exp-btn" onclick="exportCSV()" style="font-size:10px;padding:5px 10px;">📊 CSV</button>
+    </div>
   </div>
   <div class="chips" id="chips"></div>
 </div>
 
+<input type="file" id="importInput" accept=".json" style="display:none" onchange="importJSON(event)">
 <!-- LIST -->
 <div id="vList">
   <div class="tabs">
@@ -125,6 +129,7 @@ textarea{resize:none;min-height:80px;}
   <div class="fbar" id="fbar"></div>
   <div class="list-wrap" id="listWrap"></div>
   <button class="fab" onclick="openAdd()">+</button>
+  <button onclick="document.getElementById('importInput').click()" style="position:fixed;bottom:22px;left:18px;padding:10px 16px;border-radius:20px;border:none;background:#1A1714;color:#F5F2EE;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;z-index:200;box-shadow:0 2px 10px rgba(0,0,0,.2);">📂 Restaurer</button>
 </div>
 
 <!-- ADD/EDIT -->
@@ -484,6 +489,59 @@ function updateStats() {
 }
 
 // EXPORT
+function exportJSON() {
+  const data = { version:1, exportedAt:new Date().toISOString(), items, dests };
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data));
+  a.download = 'inventaire_backup_' + new Date().toLocaleDateString('fr-FR').replace(/\//g,'-') + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast('✅ Sauvegarde téléchargée !');
+}
+
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.items || !Array.isArray(data.items)) throw new Error();
+      const merge = confirm('Fusionner avec les données existantes ?\n(Annuler = remplacer tout)');
+      if (merge) {
+        const existingIds = new Set(items.map(i=>i.id));
+        const newItems = data.items.filter(i=>!existingIds.has(i.id));
+        items = [...items, ...newItems];
+      } else {
+        items = data.items;
+      }
+      if (data.dests) dests = data.dests;
+      persist();
+      showList();
+      showToast('✅ ' + (merge?'Fusion':'Restauration') + ' réussie — ' + items.length + ' articles');
+    } catch(err) {
+      showToast('❌ Fichier invalide');
+    }
+  };
+  r.readAsText(file);
+  e.target.value='';
+}
+
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1A1714;color:#F5F2EE;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:999;transition:opacity .3s;white-space:nowrap;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity='0'; }, 2500);
+}
+
 function exportCSV() {
   if (!items.length) return;
   const rows=[['Pièce','Description','Quantité','Destination','Notes','Date'],
