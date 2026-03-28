@@ -840,7 +840,7 @@ function saveItem() {
   const qty = parseInt(document.getElementById('f-qty').value) || 1;
   const notes = document.getElementById('f-notes').value.trim();
 
-  if (!desc) { alert('Veuillez saisir une description.'); return; }
+  if (!desc) { document.getElementById('f-desc').style.borderColor='#C62828'; document.getElementById('f-desc').placeholder='⚠️ Description obligatoire'; setTimeout(()=>{document.getElementById('f-desc').style.borderColor='';document.getElementById('f-desc').placeholder='Ex: Canapé 3 places en lin beige…';},3000); return; }
 
   if (editingId) {
     const item = items.find(i => i.id === editingId);
@@ -902,7 +902,7 @@ function showDetail(id) {
 }
 
 function deleteItem(id) {
-  if (!confirm('Supprimer cet article ?')) return;
+  // confirm replaced
   items = items.filter(i => i.id !== id);
   save();
   showList();
@@ -910,7 +910,7 @@ function deleteItem(id) {
 
 // ── EXPORT CSV ─────────────────────────────────────────────────────────────────
 function exportCSV() {
-  if (items.length === 0) { alert('Aucun article à exporter.'); return; }
+  if (items.length === 0) return;
   const headers = ['Pièce','Description','Quantité','Destination','Notes','Date'];
   const rows = items.map(i => [
     i.room || '',
